@@ -1,11 +1,38 @@
 import express from 'express'
 import bodyParser from 'body-parser'
+import dotenv from 'dotenv'
+import cloudinaryFramework from 'cloudinary'
+import multer from 'multer'
+import cloudinaryStorage from 'multer-storage-cloudinary'
 import cors from 'cors'
+import mongoose from 'mongoose'
+import { File } from './models/files'
 
-// Defines the port the app will run on. Defaults to 8080, but can be 
-// overridden when starting the server. For example:
-//
-//   PORT=9000 npm start
+dotenv.config()
+
+const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/prototyp-techtest"
+  mongoose.connect(mongoUrl, 
+    { useNewUrlParser: true, 
+      useUnifiedTopology: true })
+  mongoose.Promise = Promise
+
+const cloudinary = cloudinaryFramework.v2; 
+  cloudinary.config({
+    cloud_name: 'dnqxxs1yn',
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  })
+
+const storage = cloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: 'files',
+      allowedFormats: ['jpg', 'pdf'],
+      transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
+    },
+  })
+const parser = multer({ storage })
+
 const port = process.env.PORT || 8080
 const app = express()
 
@@ -15,8 +42,53 @@ app.use(bodyParser.json())
 
 // Start defining your routes here
 app.get('/', (req, res) => {
-  res.send('Hello world')
+  res.send('Hello Prototyp!')
 })
+
+app.get('/fileuploads', async (req, res) => {
+  try {
+    const fileList = await File.find().sort({ createdAt:'desc' }).exec()
+    res.json(fileList)
+  } catch (err) {
+    res.status(400).json({ message: "Not working!" })
+  }
+})
+
+app.post('/fileuploads', async (req, res) => {
+  const { uploadedBy, description } = req.body
+  try {
+    const file = await new File({ uploadedBy, description }).save()
+    res.status(201).json(file)
+  } catch (err) {
+    res.status(400).json({ errors: err.errors })
+  } 
+})
+
+app.post('/fileuploads/:id', parser.single('file'), async (req, res) => {
+  const { id } = req.params
+  try {
+    const updatedFile = await File.findOneAndUpdate(
+      { _id: id },
+      { fileUrl: req.file.path, fileId: req.file.filename},
+      { new: true}
+    )
+    res.json(updatedFile)
+  } catch (err) {
+    res.status(400).json({ message: "Nothing works"})
+  }
+})
+
+// app.delete('/fileuploads/:id', async (req, res) => {
+//   const { id } = req.params
+//   try {
+//     const updatedFile = await File.findOneAndRemove(
+//       { _id: id }
+//     )
+//     res.status(204).json(updatedFile)
+//   } catch (err) {
+//     res.status(400).json({ message: "Nothing works"})
+//   }
+// })
 
 // Start the server
 app.listen(port, () => {
