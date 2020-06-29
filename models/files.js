@@ -1,6 +1,5 @@
 import mongoose from 'mongoose'
 
-// Working model with arrays
 export const File = mongoose.model('File', {
   fileUrl: {
     type: String,

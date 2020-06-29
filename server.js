@@ -16,6 +16,7 @@ const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/prototyp-techtest
       useUnifiedTopology: true })
   mongoose.Promise = Promise
 
+  // Cloudinary to store images.
 const cloudinary = cloudinaryFramework.v2; 
   cloudinary.config({
     cloud_name: 'dnqxxs1yn',
@@ -33,18 +34,20 @@ const storage = cloudinaryStorage({
   })
 const parser = multer({ storage })
 
+// Port
 const port = process.env.PORT || 8080
 const app = express()
 
-// Add middlewares to enable cors and json body parsing
+// Middlewares to enable cors and json body parsing
 app.use(cors())
 app.use(bodyParser.json())
 
-// Start defining your routes here
+// Routes
 app.get('/', (req, res) => {
   res.send('Hello Prototyp!')
 })
 
+// GET request to get all file uploads
 app.get('/fileuploads', async (req, res) => {
   try {
     const fileList = await File.find().sort({ createdAt:'desc' }).exec()
@@ -54,6 +57,7 @@ app.get('/fileuploads', async (req, res) => {
   }
 })
 
+// POST request to upload file info
 app.post('/fileuploads', async (req, res) => {
   const { uploadedBy, description } = req.body
   try {
@@ -64,6 +68,7 @@ app.post('/fileuploads', async (req, res) => {
   } 
 })
 
+// POST request to append image to uploaded file info
 app.post('/fileuploads/:id', parser.single('file'), async (req, res) => {
   const { id } = req.params
   try {
@@ -78,17 +83,18 @@ app.post('/fileuploads/:id', parser.single('file'), async (req, res) => {
   }
 })
 
-// app.delete('/fileuploads/:id', async (req, res) => {
-//   const { id } = req.params
-//   try {
-//     const updatedFile = await File.findOneAndRemove(
-//       { _id: id }
-//     )
-//     res.status(204).json(updatedFile)
-//   } catch (err) {
-//     res.status(400).json({ message: "Nothing works"})
-//   }
-// })
+// DELETE request to delete object from database
+app.delete('/fileuploads/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    const updatedFile = await File.findOneAndRemove(
+      { _id: id }
+    )
+    res.status(204).json(updatedFile)
+  } catch (err) {
+    res.status(400).json({ message: "Nothing works"})
+  }
+})
 
 // Start the server
 app.listen(port, () => {
